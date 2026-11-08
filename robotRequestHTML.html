@@ -1,0 +1,152 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Robot Control</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #121212;
+            color: #ffffff;
+            font-family: system-ui, -apple-system, sans-serif;
+            touch-action: manipulation;
+        }
+
+        #display-container {
+            width: 100%;
+            max-width: 640px;
+            background-color: #000;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            margin-bottom: 30px;
+            line-height: 0;
+        }
+
+        /* flip image */
+        #display-container img {
+            width: 100%;
+            height: auto;
+            display: block;
+            transform: scaleY(-1);
+            transform: scaleX(-1);
+        }
+
+        .controller {
+            display: grid;
+            grid-template-areas:
+                ". up ."
+                "left . right"
+                ". down .";
+            gap: 15px;
+            user-select: none;
+        }
+
+        button {
+            width: 85px;
+            height: 85px;
+            font-size: 28px;
+            border: none;
+            border-radius: 50%;
+            background-color: #333;
+            color: white;
+            box-shadow: 0 6px #1a1a1a;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        button:active {
+            box-shadow: 0 2px #1a1a1a;
+            transform: translateY(4px);
+            background-color: #555;
+        }
+
+        #moveUp    { grid-area: up; }
+        #moveLeft  { grid-area: left; }
+        #moveRight { grid-area: right; }
+        #moveDown  { grid-area: down; }
+    </style>
+</head>
+<body>
+
+  <div id="display-container"></div>
+
+  <div class="controller">
+    <button type="button" id="moveUp">▲</button>
+    <button type="button" id="moveLeft">◀</button>
+    <button type="button" id="moveRight">▶</button>
+    <button type="button" id="moveDown">▼</button>
+  </div>
+
+  <script>
+    const upButton = document.getElementById('moveUp');
+    const downButton = document.getElementById('moveDown');
+    const rightButton = document.getElementById('moveRight');
+    const leftButton = document.getElementById('moveLeft');
+
+    let moveForward = false;
+    let moveBack = false;
+    let moveRight = false;
+    let moveLeft = false;
+
+    // Movement Loop
+    setInterval(function () {
+        let directionRequest = ""
+        if(moveForward) directionRequest = "forward"
+        else if(moveBack) directionRequest = "back"
+        else if(moveRight) directionRequest = "right"
+        else if(moveLeft) directionRequest = "left"
+        else return;
+
+        fetch(directionRequest).then((response) => {
+            if (!response.ok) console.log("error");
+            return response.text()
+        }).then((text) => { console.log(text); });
+    }, 30);
+
+    // image loop
+    let img = new Image();
+    document.getElementById('display-container').appendChild(img);
+    let lastURL;
+
+    setInterval(function () {
+
+        console.log("here1");
+        fetch("nextframe").then((response) => {
+            if (!response.ok) console.log("error");
+            return response.arrayBuffer()
+        }).then((imageArray) => {
+            let byteArray = new Uint8Array(imageArray);
+            console.log(imageArray);
+            let blob = new Blob([byteArray], {type: 'image/jpeg'});
+            let frameUrl = URL.createObjectURL(blob);
+            img.src = frameUrl;
+            if(lastURL) URL.revokeObjectURL(lastURL);
+            lastURL = frameUrl;
+        });
+    }, 30);
+
+    // movement
+    function bindControl(btn, pressCallback, releaseCallback) {
+        btn.addEventListener('mousedown', pressCallback);
+        btn.addEventListener('mouseup', releaseCallback);
+        btn.addEventListener('mouseleave', releaseCallback);
+        btn.addEventListener('touchstart', (e) => { e.preventDefault(); pressCallback(); });
+        btn.addEventListener('touchend', (e) => { e.preventDefault(); releaseCallback(); });
+    }
+
+    bindControl(upButton,    () => { moveForward = true; }, () => { moveForward = false; });
+    bindControl(downButton,  () => { moveBack = true;    }, () => { moveBack = false;    });
+    bindControl(leftButton,  () => { moveLeft = true;    }, () => { moveLeft = false;    });
+    bindControl(rightButton, () => { moveRight = true;   }, () => { moveRight = false;   });
+  </script>
+</body>
+</html>
